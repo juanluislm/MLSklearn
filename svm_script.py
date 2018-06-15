@@ -222,25 +222,6 @@ def train_svm_classifer(features, labels, model_output_path):
     print(model_tunning.best_params_)
 
 
-
-    # clf = OneVsRestClassifier(SVC(probability=True))
-    # svm = SVC(probability=True, max_iter=100)
-    # clf = OneVsRestClassifier(grid_search.GridSearchCV(svm, param, cv=10, verbose=0, n_jobs=6) )
-    # clf.fit(X_test, y_test)
-
-    # print(clf.n_jobs)
-
-
- 
-    # request probability estimation
-    # svm = SVC(probability=True)
- 
-    # 10-fold cross validation, use 4 thread as each fold and each parameter set can be train in parallel
-    # clf = grid_search.GridSearchCV(svm, param,
-    #         cv=10, n_jobs=2, verbose=3)
-    #
-    # clf.fit(X_train, y_train)
- 
     if os.path.exists(model_output_path):
         joblib.dump(model_tunning.best_estimator_, model_output_path)
     else:
@@ -249,18 +230,7 @@ def train_svm_classifer(features, labels, model_output_path):
     print("doing good!")
 
     return model_tunning
-    # print("\nBest parameters set:")
-    # print(clf.best_params_)
-    #
-    # y_predict=clf.predict(X_test)
-    #
-    # labels=sorted(list(set(labels)))
-    # print("\nConfusion matrix:")
-    # print("Labels: {0}\n".format(",".join(labels)))
-    # print(confusion_matrix(y_test, y_predict, labels=labels))
-    #
-    # print("\nClassification report:")
-    # print(classification_report(y_test, y_predict))
+
 
 
 def train_svm_classifer2(features, labels, model_output_path, t_size, njobs, verbose):

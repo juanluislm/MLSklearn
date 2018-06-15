@@ -1,11 +1,14 @@
-from scripts.svm_script import *
 from sklearn import mixture
+try:
+    from scripts.svm_script import *
+except:
+    from svm_script import *
 
-def train_gmm_classifier(features, labels, model_output_path):
+def train_gmm_classifier(features, labels, model_output_path, t_size, njobs, verbose):
 
     scaler = StandardScaler()
     features = scaler.fit(features).transform(features)
-    X_train, X_test, y_train, y_test = cross_validation.train_test_split(features, labels, test_size=0.25)
+    X_train, X_test, y_train, y_test = cross_validation.train_test_split(features, labels, test_size=test_size)
 
     best_gmm = None
     n_components_range = range(4, 16)
@@ -23,10 +26,10 @@ def train_gmm_classifier(features, labels, model_output_path):
         for cov in covariances:
             gmm = mixture.GaussianMixture(n_components=n_components,
                                           covariance_type=cov, max_iter=10000,
-                                          init_params='kmeans', verbose=False)
+                                          init_params='kmeans', verbose=verbose)
 
             print(cov, n_components)
-            model_to_set = OneVsRestClassifier(gmm, n_jobs=8)
+            model_to_set = OneVsRestClassifier(gmm, n_jobs=njobs)
             model_to_set.fit(X_train, y_train)
 
             results = np.zeros((tests + 1, classes), dtype=float)
@@ -85,23 +88,53 @@ def train_gmm_classifier(features, labels, model_output_path):
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        '--jobs',
+        type=int,
+        default=12,
+        help='Number of threads to be fired during training.'
+    )
+    parser.add_argument(
+        '--test_size',
+        type=float,
+        default=0.8,
+        help='% of images used for testing.'
+    )
+    parser.add_argument(
+        '--bottleneck_path',
+        type=str,
+        default='/home/withme/dev/tensorflow-for-poets-2/tf_files/bottlenecks_funneled/lfw_all',
+        help='Path to the bottlenecks '
+    )
+    parser.add_argument(
+        '--output_prefix',
+        type=str,
+        default='/home/withme/dev/tensorflow-for-poets-2/scripts/gmm_',
+        help='Prefix of the folder where the models and data will be saved.'
+    )
 
-    fname = 'lfw_header_lines.p'
+    parser.add_argument(
+        '--header_lines',
+        type=str,
+        default='lfw_header_lines.p',
+        help='Path to the header lines pickle file.'
+    )
+    parser.add_argument(
+        '--verbose',
+        type=bool,
+        default=True,
+        help='Verbose? Are you sure?.'
+    )
+
+    FLAGS = parser.parse_args()
+
+    fname = FLAGS.header_lines
     keys_lines = pickle.load(open(fname, 'rb'))
     keys = keys_lines['header']
     lines = keys_lines['lines']
-    # included_keys = ['male', 'asianindian', 'eastasian', 'african', 'latino', 'caucasian']
-    # keys, lines = prune_data(keys, lines, excluded_keys = ['Male']) # duplicate keys
 
-    # print('=================================================',len(keys))
-    # print('=================================================', len(lines))
-    #
-    # lines_trans = np.array(lines).transpose()
-    #
-    # lines = lines_trans.tolist()
-    # keys2 = [x for x in range(0,len(keys))]
-
-    path = '/home/withme/dev/tensorflow-for-poets-2/tf_files/bottlenecks_funneled/lfw_all'
+    path = FLAGS.bottleneck_path
     postfix = '.jpg_mobilenet_0.50_224.txt'
 
     bottlenecks = load_bottlenecks(path, lines, postfix)
@@ -110,13 +143,16 @@ if __name__ == '__main__':
 
     # keys, lines = prune_data(keys, lines, excluded_keys=['Male'])  # duplicate keys
 
-    keys, lines = prune_data2(keys, lines, {'Male':1})
+    keys, lines = prune_data2(keys, lines, {'Male': 1})
 
     ground_truth = load_ground_truth_cache(keys, lines)
+    test_size = FLAGS.test_size
 
+    out_path = FLAGS.output_prefix + str(test_size) + '_' + str(datetime.datetime.now())
 
-    train_gmm_classifier(np.array(bottlenecks),
-                         np.array(ground_truth),
-                         '/home/withme/dev/tensorflow-for-poets-2/gmm_models/gmm_')
+    os.makedirs(out_path)
+
+    train_gmm_classifier(np.array(bottlenecks), np.array(ground_truth),
+                         out_path + '/gmm_', test_size, FLAGS.jobs, FLAGS.verbose)
 
     print("done")
